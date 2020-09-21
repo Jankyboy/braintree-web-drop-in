@@ -1,60 +1,60 @@
-'use strict';
+"use strict";
 
-var assign = require('./lib/assign').assign;
-var analytics = require('./lib/analytics');
-var classList = require('@braintree/class-list');
-var constants = require('./constants');
-var DropinError = require('./lib/dropin-error');
-var DropinModel = require('./dropin-model');
-var EventEmitter = require('@braintree/event-emitter');
-var assets = require('@braintree/asset-loader');
-var fs = require('fs');
-var MainView = require('./views/main-view');
-var paymentMethodsViewID = require('./views/payment-methods-view').ID;
-var paymentOptionsViewID = require('./views/payment-options-view').ID;
+var assign = require("./lib/assign").assign;
+var analytics = require("./lib/analytics");
+var classList = require("@braintree/class-list");
+var constants = require("./constants");
+var DropinError = require("./lib/dropin-error");
+var DropinModel = require("./dropin-model");
+var EventEmitter = require("@braintree/event-emitter");
+var assets = require("@braintree/asset-loader");
+var fs = require("fs");
+var MainView = require("./views/main-view");
+var paymentMethodsViewID = require("./views/payment-methods-view").ID;
+var paymentOptionsViewID = require("./views/payment-options-view").ID;
 var paymentOptionIDs = constants.paymentOptionIDs;
-var translations = require('./translations').translations;
-var isUtf8 = require('./lib/is-utf-8');
-var uuid = require('@braintree/uuid');
-var Promise = require('./lib/promise');
-var sanitizeHtml = require('./lib/sanitize-html');
-var DataCollector = require('./lib/data-collector');
-var ThreeDSecure = require('./lib/three-d-secure');
-var wrapPrototype = require('@braintree/wrap-promise').wrapPrototype;
+var translations = require("./translations").translations;
+var isUtf8 = require("./lib/is-utf-8");
+var uuid = require("@braintree/uuid");
+var Promise = require("./lib/promise");
+var sanitizeHtml = require("./lib/sanitize-html");
+var DataCollector = require("./lib/data-collector");
+var ThreeDSecure = require("./lib/three-d-secure");
+var wrapPrototype = require("@braintree/wrap-promise").wrapPrototype;
 
-var mainHTML = fs.readFileSync(__dirname + '/html/main.html', 'utf8');
-var svgHTML = fs.readFileSync(__dirname + '/html/svgs.html', 'utf8');
+var mainHTML = fs.readFileSync(__dirname + "/html/main.html", "utf8");
+var svgHTML = fs.readFileSync(__dirname + "/html/svgs.html", "utf8");
 
 var PASS_THROUGH_EVENTS = [
-  'paymentMethodRequestable',
-  'noPaymentMethodRequestable',
-  'paymentOptionSelected',
+  "paymentMethodRequestable",
+  "noPaymentMethodRequestable",
+  "paymentOptionSelected",
 
   // Card View Events
-  'card:binAvailable',
-  'card:blur',
-  'card:cardTypeChange',
-  'card:empty',
-  'card:focus',
-  'card:inputSubmitRequest',
-  'card:notEmpty',
-  'card:validityChange'
+  "card:binAvailable",
+  "card:blur",
+  "card:cardTypeChange",
+  "card:empty",
+  "card:focus",
+  "card:inputSubmitRequest",
+  "card:notEmpty",
+  "card:validityChange",
 ];
 var UPDATABLE_CONFIGURATION_OPTIONS = [
   paymentOptionIDs.paypal,
   paymentOptionIDs.paypalCredit,
   paymentOptionIDs.applePay,
   paymentOptionIDs.googlePay,
-  'threeDSecure'
+  "threeDSecure",
 ];
 var UPDATABLE_CONFIGURATION_OPTIONS_THAT_REQUIRE_UNVAULTED_PAYMENT_METHODS_TO_BE_REMOVED = [
   paymentOptionIDs.paypal,
   paymentOptionIDs.paypalCredit,
   paymentOptionIDs.applePay,
-  paymentOptionIDs.googlePay
+  paymentOptionIDs.googlePay,
 ];
 var HAS_RAW_PAYMENT_DATA = {};
-var VERSION = '__VERSION__';
+var VERSION = "__VERSION__";
 
 HAS_RAW_PAYMENT_DATA[constants.paymentMethodTypes.googlePay] = true;
 HAS_RAW_PAYMENT_DATA[constants.paymentMethodTypes.applePay] = true;
@@ -359,11 +359,11 @@ HAS_RAW_PAYMENT_DATA[constants.paymentMethodTypes.applePay] = true;
 function Dropin(options) {
   this._client = options.client;
   this._componentID = uuid();
-  this._dropinWrapper = document.createElement('div');
-  this._dropinWrapper.id = 'braintree--dropin__' + this._componentID;
-  this._dropinWrapper.setAttribute('data-braintree-id', 'wrapper');
-  this._dropinWrapper.style.display = 'none';
-  this._dropinWrapper.className = 'braintree-loading';
+  this._dropinWrapper = document.createElement("div");
+  this._dropinWrapper.id = "braintree--dropin__" + this._componentID;
+  this._dropinWrapper.setAttribute("data-braintree-id", "wrapper");
+  this._dropinWrapper.style.display = "none";
+  this._dropinWrapper.className = "braintree-loading";
   this._merchantConfiguration = options.merchantConfiguration;
 
   EventEmitter.call(this);
@@ -374,34 +374,51 @@ EventEmitter.createChild(Dropin);
 Dropin.prototype._initialize = function (callback) {
   var localizedStrings, localizedHTML;
   var self = this;
-  var container = self._merchantConfiguration.container || self._merchantConfiguration.selector;
+  var container =
+    self._merchantConfiguration.container ||
+    self._merchantConfiguration.selector;
 
   if (!container) {
-    analytics.sendEvent(self._client, 'configuration-error');
-    callback(new DropinError('options.container is required.'));
+    analytics.sendEvent(self._client, "configuration-error");
+    callback(new DropinError("options.container is required."));
 
     return;
-  } else if (self._merchantConfiguration.container && self._merchantConfiguration.selector) {
-    analytics.sendEvent(self._client, 'configuration-error');
-    callback(new DropinError('Must only have one options.selector or options.container.'));
+  } else if (
+    self._merchantConfiguration.container &&
+    self._merchantConfiguration.selector
+  ) {
+    analytics.sendEvent(self._client, "configuration-error");
+    callback(
+      new DropinError(
+        "Must only have one options.selector or options.container."
+      )
+    );
 
     return;
   }
 
-  if (typeof container === 'string') {
+  if (typeof container === "string") {
     container = document.querySelector(container);
   }
 
   if (!container || container.nodeType !== 1) {
-    analytics.sendEvent(self._client, 'configuration-error');
-    callback(new DropinError('options.selector or options.container must reference a valid DOM node.'));
+    analytics.sendEvent(self._client, "configuration-error");
+    callback(
+      new DropinError(
+        "options.selector or options.container must reference a valid DOM node."
+      )
+    );
 
     return;
   }
 
   if (container.innerHTML.trim()) {
-    analytics.sendEvent(self._client, 'configuration-error');
-    callback(new DropinError('options.selector or options.container must reference an empty DOM node.'));
+    analytics.sendEvent(self._client, "configuration-error");
+    callback(
+      new DropinError(
+        "options.selector or options.container must reference an empty DOM node."
+      )
+    );
 
     return;
   }
@@ -409,27 +426,37 @@ Dropin.prototype._initialize = function (callback) {
   // Backfill with `en`
   self._strings = assign({}, translations.en);
   if (self._merchantConfiguration.locale) {
-    localizedStrings = translations[self._merchantConfiguration.locale] || translations[self._merchantConfiguration.locale.split('_')[0]];
+    localizedStrings =
+      translations[self._merchantConfiguration.locale] ||
+      translations[self._merchantConfiguration.locale.split("_")[0]];
     // Fill `strings` with `localizedStrings` that may exist
     self._strings = assign(self._strings, localizedStrings);
   }
 
   if (!isUtf8()) {
     // non-utf-8 encodings often don't support the bullet character
-    self._strings.endingIn = self._strings.endingIn.replace(/•/g, '*');
+    self._strings.endingIn = self._strings.endingIn.replace(/•/g, "*");
   }
 
   if (self._merchantConfiguration.translations) {
-    Object.keys(self._merchantConfiguration.translations).forEach(function (key) {
-      self._strings[key] = sanitizeHtml(self._merchantConfiguration.translations[key]);
+    Object.keys(self._merchantConfiguration.translations).forEach(function (
+      key
+    ) {
+      self._strings[key] = sanitizeHtml(
+        self._merchantConfiguration.translations[key]
+      );
     });
   }
 
-  localizedHTML = Object.keys(self._strings).reduce(function (result, stringKey) {
+  localizedHTML = Object.keys(self._strings).reduce(function (
+    result,
+    stringKey
+  ) {
     var stringValue = self._strings[stringKey];
 
-    return result.replace(RegExp('{{' + stringKey + '}}', 'g'), stringValue);
-  }, mainHTML);
+    return result.replace(RegExp("{{" + stringKey + "}}", "g"), stringValue);
+  },
+  mainHTML);
 
   self._dropinWrapper.innerHTML = svgHTML + localizedHTML;
   container.appendChild(self._dropinWrapper);
@@ -438,45 +465,50 @@ Dropin.prototype._initialize = function (callback) {
     client: self._client,
     container: container,
     componentID: self._componentID,
-    merchantConfiguration: self._merchantConfiguration
+    merchantConfiguration: self._merchantConfiguration,
   });
 
   self._injectStylesheet();
 
-  self._model.initialize().then(function () {
-    self._model.on('cancelInitialization', function (err) {
-      self._dropinWrapper.innerHTML = '';
-      analytics.sendEvent(self._client, 'load-error');
-      callback(err);
-    });
+  self._model
+    .initialize()
+    .then(function () {
+      self._model.on("cancelInitialization", function (err) {
+        self._dropinWrapper.innerHTML = "";
+        analytics.sendEvent(self._client, "load-error");
+        callback(err);
+      });
 
-    self._model.on('asyncDependenciesReady', function () {
-      if (self._model.dependencySuccessCount >= 1) {
-        analytics.sendEvent(self._client, 'appeared');
-        self._disableErroredPaymentMethods();
+      self._model.on("asyncDependenciesReady", function () {
+        if (self._model.dependencySuccessCount >= 1) {
+          analytics.sendEvent(self._client, "appeared");
+          self._disableErroredPaymentMethods();
 
-        self._handleAppSwitch();
+          self._handleAppSwitch();
 
-        self._model.confirmDropinReady();
+          self._model.confirmDropinReady();
 
-        callback(null, self);
-      } else {
-        self._model.cancelInitialization(new DropinError('All payment options failed to load.'));
-      }
-    });
+          callback(null, self);
+        } else {
+          self._model.cancelInitialization(
+            new DropinError("All payment options failed to load.")
+          );
+        }
+      });
 
-    PASS_THROUGH_EVENTS.forEach(function (eventName) {
-      self._model.on(eventName, function (event) {
-        self._emit(eventName, event);
+      PASS_THROUGH_EVENTS.forEach(function (eventName) {
+        self._model.on(eventName, function (event) {
+          self._emit(eventName, event);
+        });
+      });
+
+      return self._setUpDependenciesAndViews();
+    })
+    .catch(function (err) {
+      self.teardown().then(function () {
+        callback(err);
       });
     });
-
-    return self._setUpDependenciesAndViews();
-  }).catch(function (err) {
-    self.teardown().then(function () {
-      callback(err);
-    });
-  });
 };
 
 /**
@@ -498,7 +530,7 @@ Dropin.prototype.updateConfiguration = function (property, key, value) {
     return;
   }
 
-  if (property === 'threeDSecure') {
+  if (property === "threeDSecure") {
     if (this._threeDSecure) {
       this._threeDSecure.updateConfiguration(key, value);
     }
@@ -514,7 +546,11 @@ Dropin.prototype.updateConfiguration = function (property, key, value) {
 
   view.updateConfiguration(key, value);
 
-  if (UPDATABLE_CONFIGURATION_OPTIONS_THAT_REQUIRE_UNVAULTED_PAYMENT_METHODS_TO_BE_REMOVED.indexOf(property) === -1) {
+  if (
+    UPDATABLE_CONFIGURATION_OPTIONS_THAT_REQUIRE_UNVAULTED_PAYMENT_METHODS_TO_BE_REMOVED.indexOf(
+      property
+    ) === -1
+  ) {
     return;
   }
 
@@ -582,27 +618,36 @@ Dropin.prototype.clearSelectedPaymentMethod = function () {
 
   this._mainView.showLoadingIndicator();
 
-  this._model.refreshPaymentMethods().then(function () {
-    this._navigateToInitialView();
-    this._mainView.hideLoadingIndicator();
-  }.bind(this));
+  this._model.refreshPaymentMethods().then(
+    function () {
+      this._navigateToInitialView();
+      this._mainView.hideLoadingIndicator();
+    }.bind(this)
+  );
 };
 
 Dropin.prototype._setUpDataCollector = function () {
   var self = this;
-  var config = assign({}, self._merchantConfiguration.dataCollector, {client: self._client});
+  var config = assign({}, self._merchantConfiguration.dataCollector, {
+    client: self._client,
+  });
 
   this._model.asyncDependencyStarting();
   this._dataCollector = new DataCollector(config);
 
-  this._dataCollector.initialize().then(function () {
-    self._model.asyncDependencyReady();
-  }).catch(function (err) {
-    self._model.cancelInitialization(new DropinError({
-      message: 'Data Collector failed to set up.',
-      braintreeWebError: err
-    }));
-  });
+  this._dataCollector
+    .initialize()
+    .then(function () {
+      self._model.asyncDependencyReady();
+    })
+    .catch(function (err) {
+      self._model.cancelInitialization(
+        new DropinError({
+          message: "Data Collector failed to set up.",
+          braintreeWebError: err,
+        })
+      );
+    });
 };
 
 Dropin.prototype._setUpThreeDSecure = function () {
@@ -613,14 +658,19 @@ Dropin.prototype._setUpThreeDSecure = function () {
 
   this._threeDSecure = new ThreeDSecure(this._client, config);
 
-  this._threeDSecure.initialize().then(function () {
-    self._model.asyncDependencyReady();
-  }).catch(function (err) {
-    self._model.cancelInitialization(new DropinError({
-      message: '3D Secure failed to set up.',
-      braintreeWebError: err
-    }));
-  });
+  this._threeDSecure
+    .initialize()
+    .then(function () {
+      self._model.asyncDependencyReady();
+    })
+    .catch(function (err) {
+      self._model.cancelInitialization(
+        new DropinError({
+          message: "3D Secure failed to set up.",
+          braintreeWebError: err,
+        })
+      );
+    });
 };
 
 Dropin.prototype._setUpDependenciesAndViews = function () {
@@ -636,18 +686,24 @@ Dropin.prototype._setUpDependenciesAndViews = function () {
     client: this._client,
     element: this._dropinWrapper,
     model: this._model,
-    strings: this._strings
+    strings: this._strings,
   });
 };
 
 Dropin.prototype._removeUnvaultedPaymentMethods = function (filter) {
-  filter = filter || function () { return true; };
+  filter =
+    filter ||
+    function () {
+      return true;
+    };
 
-  this._model.getPaymentMethods().forEach(function (paymentMethod) {
-    if (filter(paymentMethod) && !paymentMethod.vaulted) {
-      this._model.removePaymentMethod(paymentMethod);
-    }
-  }.bind(this));
+  this._model.getPaymentMethods().forEach(
+    function (paymentMethod) {
+      if (filter(paymentMethod) && !paymentMethod.vaulted) {
+        this._model.removePaymentMethod(paymentMethod);
+      }
+    }.bind(this)
+  );
 };
 
 Dropin.prototype._navigateToInitialView = function () {
@@ -658,7 +714,8 @@ Dropin.prototype._navigateToInitialView = function () {
     hasNoSavedPaymentMethods = this._model.getPaymentMethods().length === 0;
 
     if (hasNoSavedPaymentMethods) {
-      hasOnlyOneSupportedPaymentOption = this._model.supportedPaymentOptions.length === 1;
+      hasOnlyOneSupportedPaymentOption =
+        this._model.supportedPaymentOptions.length === 1;
 
       if (hasOnlyOneSupportedPaymentOption) {
         this._mainView.setPrimaryView(this._model.supportedPaymentOptions[0]);
@@ -683,18 +740,23 @@ Dropin.prototype._disableErroredPaymentMethods = function () {
 
   paymentMethodOptionsElements = this._mainView.getOptionsElements();
 
-  failedDependencies.forEach(function (paymentMethodId) {
-    var element = paymentMethodOptionsElements[paymentMethodId];
-    var div = element.div;
-    var clickHandler = element.clickHandler;
-    var error = this._model.failedDependencies[paymentMethodId];
-    var errorMessageDiv = div.querySelector('.braintree-option__disabled-message');
+  failedDependencies.forEach(
+    function (paymentMethodId) {
+      var element = paymentMethodOptionsElements[paymentMethodId];
+      var div = element.div;
+      var clickHandler = element.clickHandler;
+      var error = this._model.failedDependencies[paymentMethodId];
+      var errorMessageDiv = div.querySelector(
+        ".braintree-option__disabled-message"
+      );
 
-    classList.add(div, 'braintree-disabled');
-    div.removeEventListener('click', clickHandler);
-    errorMessageDiv.innerHTML = constants.errors.DEVELOPER_MISCONFIGURATION_MESSAGE;
-    console.error(error); // eslint-disable-line no-console
-  }.bind(this));
+      classList.add(div, "braintree-disabled");
+      div.removeEventListener("click", clickHandler);
+      errorMessageDiv.innerHTML =
+        constants.errors.DEVELOPER_MISCONFIGURATION_MESSAGE;
+      console.error(error); // eslint-disable-line no-console
+    }.bind(this)
+  );
 };
 
 Dropin.prototype._sendVaultedPaymentMethodAppearAnalyticsEvents = function () {
@@ -713,7 +775,10 @@ Dropin.prototype._sendVaultedPaymentMethodAppearAnalyticsEvents = function () {
 
     typesThatSentAnEvent[type] = true;
 
-    analytics.sendEvent(this._client, 'vaulted-' + constants.analyticsKinds[type] + '.appear');
+    analytics.sendEvent(
+      this._client,
+      "vaulted-" + constants.analyticsKinds[type] + ".appear"
+    );
   }
 };
 
@@ -806,36 +871,43 @@ Dropin.prototype.requestPaymentMethod = function (options) {
 
   options = options || {};
 
-  return this._mainView.requestPaymentMethod().then(function (payload) {
-    if (self._shouldPerformThreeDSecureVerification(payload)) {
-      self._mainView.showLoadingIndicator();
+  return this._mainView
+    .requestPaymentMethod()
+    .then(function (payload) {
+      if (self._shouldPerformThreeDSecureVerification(payload)) {
+        self._mainView.showLoadingIndicator();
 
-      return self._threeDSecure.verify(payload, options.threeDSecure).then(function (newPayload) {
-        payload.nonce = newPayload.nonce;
-        payload.liabilityShifted = newPayload.liabilityShifted;
-        payload.liabilityShiftPossible = newPayload.liabilityShiftPossible;
-        payload.threeDSecureInfo = newPayload.threeDSecureInfo;
+        return self._threeDSecure
+          .verify(payload, options.threeDSecure)
+          .then(function (newPayload) {
+            payload.nonce = newPayload.nonce;
+            payload.liabilityShifted = newPayload.liabilityShifted;
+            payload.liabilityShiftPossible = newPayload.liabilityShiftPossible;
+            payload.threeDSecureInfo = newPayload.threeDSecureInfo;
 
-        self._mainView.hideLoadingIndicator();
+            self._mainView.hideLoadingIndicator();
 
-        return payload;
-      }).catch(function (err) {
-        self._mainView.hideLoadingIndicator();
+            return payload;
+          })
+          .catch(function (err) {
+            self._mainView.hideLoadingIndicator();
 
-        return Promise.reject(err);
-      });
-    }
+            return Promise.reject(err);
+          });
+      }
 
-    return payload;
-  }).then(function (payload) {
-    if (self._dataCollector) {
-      payload.deviceData = self._dataCollector.getDeviceData();
-    }
+      return payload;
+    })
+    .then(function (payload) {
+      if (self._dataCollector) {
+        payload.deviceData = self._dataCollector.getDeviceData();
+      }
 
-    return payload;
-  }).then(function (payload) {
-    return formatPaymentMethodPayload(payload);
-  });
+      return payload;
+    })
+    .then(function (payload) {
+      return formatPaymentMethodPayload(payload);
+    });
 };
 
 Dropin.prototype._shouldPerformThreeDSecureVerification = function (payload) {
@@ -851,7 +923,10 @@ Dropin.prototype._shouldPerformThreeDSecureVerification = function (payload) {
     return true;
   }
 
-  if (payload.type === constants.paymentMethodTypes.googlePay && payload.details.isNetworkTokenized === false) {
+  if (
+    payload.type === constants.paymentMethodTypes.googlePay &&
+    payload.details.isNetworkTokenized === false
+  ) {
     return true;
   }
 
@@ -869,13 +944,16 @@ Dropin.prototype._removeStylesheet = function () {
 Dropin.prototype._injectStylesheet = function () {
   var assetsUrl;
   var loadStylesheetOptions = {
-    id: constants.STYLESHEET_ID
+    id: constants.STYLESHEET_ID,
   };
 
-  if (document.getElementById(constants.STYLESHEET_ID)) { return; }
+  if (document.getElementById(constants.STYLESHEET_ID)) {
+    return;
+  }
 
   assetsUrl = this._client.getConfiguration().gatewayConfiguration.assetsUrl;
-  loadStylesheetOptions.href = assetsUrl + '/web/dropin/' + VERSION + '/css/dropin@DOT_MIN.css';
+  loadStylesheetOptions.href =
+    assetsUrl + "/web/dropin/" + VERSION + "/css/dropin@DOT_MIN.css";
 
   if (this._model.isInShadowDom) {
     // if Drop-in is in the shadow DOM, put the
@@ -909,36 +987,42 @@ Dropin.prototype.teardown = function () {
   }
 
   if (this._dataCollector) {
-    promise.then(function () {
-      return this._dataCollector.teardown().catch(function (error) {
-        teardownError = new DropinError({
-          message: 'Drop-in errored tearing down Data Collector.',
-          braintreeWebError: error
+    promise.then(
+      function () {
+        return this._dataCollector.teardown().catch(function (error) {
+          teardownError = new DropinError({
+            message: "Drop-in errored tearing down Data Collector.",
+            braintreeWebError: error,
+          });
         });
-      });
-    }.bind(this));
+      }.bind(this)
+    );
   }
 
   if (this._threeDSecure) {
-    promise.then(function () {
-      return this._threeDSecure.teardown().catch(function (error) {
-        teardownError = new DropinError({
-          message: 'Drop-in errored tearing down 3D Secure.',
-          braintreeWebError: error
+    promise.then(
+      function () {
+        return this._threeDSecure.teardown().catch(function (error) {
+          teardownError = new DropinError({
+            message: "Drop-in errored tearing down 3D Secure.",
+            braintreeWebError: error,
+          });
         });
-      });
-    }.bind(this));
+      }.bind(this)
+    );
   }
 
-  return promise.then(function () {
-    return self._removeDropinWrapper();
-  }).then(function () {
-    if (teardownError) {
-      return Promise.reject(teardownError);
-    }
+  return promise
+    .then(function () {
+      return self._removeDropinWrapper();
+    })
+    .then(function () {
+      if (teardownError) {
+        return Promise.reject(teardownError);
+      }
 
-    return Promise.resolve();
-  });
+      return Promise.resolve();
+    });
 };
 
 /**
@@ -960,7 +1044,7 @@ function formatPaymentMethodPayload(paymentMethod) {
   var formattedPaymentMethod = {
     nonce: paymentMethod.nonce,
     details: paymentMethod.details,
-    type: paymentMethod.type
+    type: paymentMethod.type,
   };
 
   if (paymentMethod.vaulted != null) {
@@ -972,12 +1056,14 @@ function formatPaymentMethodPayload(paymentMethod) {
   }
 
   if (paymentMethod.type in HAS_RAW_PAYMENT_DATA) {
-    formattedPaymentMethod.details.rawPaymentData = paymentMethod.rawPaymentData;
+    formattedPaymentMethod.details.rawPaymentData =
+      paymentMethod.rawPaymentData;
   }
 
-  if (typeof paymentMethod.liabilityShiftPossible === 'boolean') {
+  if (typeof paymentMethod.liabilityShiftPossible === "boolean") {
     formattedPaymentMethod.liabilityShifted = paymentMethod.liabilityShifted;
-    formattedPaymentMethod.liabilityShiftPossible = paymentMethod.liabilityShiftPossible;
+    formattedPaymentMethod.liabilityShiftPossible =
+      paymentMethod.liabilityShiftPossible;
   }
 
   if (paymentMethod.threeDSecureInfo) {
