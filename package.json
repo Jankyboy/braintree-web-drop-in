@@ -27,7 +27,7 @@
   "license": "MIT",
   "devDependencies": {
     "@wdio/browserstack-service": "^6.4.7",
-    "@wdio/cli": "^6.4.7",
+    "@wdio/cli": "^6.5.0",
     "@wdio/local-runner": "^6.4.7",
     "@wdio/mocha-framework": "^6.4.7",
     "@wdio/spec-reporter": "^6.4.7",
