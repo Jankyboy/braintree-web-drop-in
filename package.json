@@ -63,7 +63,7 @@
     "through2": "^4.0.2",
     "vinyl": "^2.2.0",
     "vinyl-source-stream": "^2.0.0",
-    "watchify": "^3.11.1",
+    "watchify": "^4.0.0",
     "webhint-configuration-braintree-sdk": "github:braintree/webhint-configuration-braintree-sdk#semver:0.0.4"
   },
   "dependencies": {
